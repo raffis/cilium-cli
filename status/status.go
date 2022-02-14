@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"fmt"
 	"strings"
+	"sync"
 	"text/tabwriter"
 	"time"
 
@@ -99,6 +100,8 @@ type Status struct {
 	// CollectionErrors is the errors that accumulated while collecting the
 	// status
 	CollectionErrors []error
+
+	mutex sync.Mutex
 }
 
 func newStatus() *Status {
@@ -127,21 +130,29 @@ func (s *Status) aggregatedErrorCount(deployment, pod string) *ErrorCount {
 }
 
 func (s *Status) SetDisabled(deployment, pod string, disabled bool) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	m := s.aggregatedErrorCount(deployment, pod)
 	m.Disabled = disabled
 }
 
 func (s *Status) AddAggregatedError(deployment, pod string, err error) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	m := s.aggregatedErrorCount(deployment, pod)
 	m.Errors = append(m.Errors, err)
 }
 
 func (s *Status) AddAggregatedWarning(deployment, pod string, warning error) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	m := s.aggregatedErrorCount(deployment, pod)
 	m.Warnings = append(m.Warnings, warning)
 }
 
 func (s *Status) CollectionError(err error) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	s.CollectionErrors = append(s.CollectionErrors, err)
 }
 
